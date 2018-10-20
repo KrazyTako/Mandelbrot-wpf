@@ -146,26 +146,6 @@ namespace WpfApp1
             semaphore.Release();
         }
 
-        private async void Canvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            if (semaphore.CurrentCount > 0)
-            {
-                Pen red = new Pen(Brushes.Red, 2.0);
-                zoom *= (long)slider.Value;
-                double xOld = double.Parse(xPositionLabel.Content.ToString());
-                double yOld = double.Parse(yPositionLabel.Content.ToString());
-                offsetStack.Push(Tuple.Create(xOld, yOld, (int)slider.Value));
-                xOffset += xOld;
-                yOffset += yOld;
-                Point mouseP = e.GetPosition(canvas);
-                var rect = new Rectangle() { Width = 100, Height = 100 };
-                //canvas.Children.Add();
-                //g.DrawRectangle(red, (mouseP.X - 50), (mouseP.Y - 50), 100, 100);
-                await semaphore.WaitAsync();
-                await PaintMandelbrot();
-            }
-        }
-
         private async void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
             Point position = e.GetPosition(canvas);
@@ -195,9 +175,6 @@ namespace WpfApp1
                 tokenSource = new CancellationTokenSource();
                 //xPositionLabel.Content = deltaX.ToString();
                 //yPositionLabel.Content = deltaY.ToString();
-                Console.WriteLine($"Delta X: {deltaX}");
-                //Console.WriteLine($"Delta Y: {deltaY}");
-                //canvas.
             }
             else
             {
@@ -255,6 +232,28 @@ namespace WpfApp1
             var thingy = (Slider)sender;
             if (thingy.IsLoaded)
                 zoomHeader.Header = $"Zoom: {e.NewValue}";
+        }
+
+        private async void Canvas_MouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            var delta = e.Delta;
+            if (semaphore.CurrentCount > 0)
+            {
+                if(Math.Sign(delta) > 0)
+                    zoom *= (long)slider.Value;
+                else
+                    zoom /= (long)slider.Value;
+
+                double xOld = double.Parse(xPositionLabel.Content.ToString());
+                double yOld = double.Parse(yPositionLabel.Content.ToString());
+                offsetStack.Push(Tuple.Create(xOld, yOld, (int)slider.Value));
+                xOffset += xOld;
+                yOffset += yOld;
+                Point mouseP = e.GetPosition(canvas);
+                var rect = new Rectangle() { Width = 100, Height = 100 };
+                await semaphore.WaitAsync();
+                await PaintMandelbrot();
+            }
         }
     }
 }

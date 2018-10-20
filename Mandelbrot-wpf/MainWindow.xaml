@@ -15,7 +15,7 @@
             <ColumnDefinition Width="200" />
         </Grid.ColumnDefinitions>
 
-        <Canvas x:Name="Canvas" Grid.Column="0" Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" MouseLeftButtonUp="Canvas_MouseLeftButtonUp" MouseMove="Canvas_MouseMove" Loaded="Canvas_Loaded" SizeChanged="Canvas_SizeChanged" MouseDown="Canvas_MouseDown"/>
+        <Canvas x:Name="Canvas" Grid.Column="0" Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" MouseMove="Canvas_MouseMove" Loaded="Canvas_Loaded" SizeChanged="Canvas_SizeChanged" MouseDown="Canvas_MouseDown" MouseWheel="Canvas_MouseWheel"/>
         <StackPanel Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Button x:Name="ResetButton" Content="Reset" HorizontalAlignment="Stretch" VerticalAlignment="Top" Height="100" Click="Button_Click"/>
             <GroupBox Header="Location" Height="139">
