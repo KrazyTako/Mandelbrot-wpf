@@ -22,7 +22,6 @@ namespace WpfApp1
         // Semaphore to prevent firing off the drawing of the mandelbrot while it is being drawn
         SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
         CancellationTokenSource tokenSource = new CancellationTokenSource();
-        PixelShader shader = new PixelShader();
         WriteableBitmap bitmap;
 
         Canvas canvas;
@@ -35,11 +34,13 @@ namespace WpfApp1
         ProgressBar progressBar;
 
         const int MAX = 512;
+        const double xMin = -2;
+        const double yMin = -2;
         double zoom = 1;
         double xOffset = 0;
         double yOffset = 0;
-        double yMin = -2;
-        double xMin = -2;
+        double relativeMouseX = 0.0;
+        double relativeMouseY = 0.0;
 
         public MainWindow()
         {
@@ -149,17 +150,17 @@ namespace WpfApp1
         private async void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
             Point position = e.GetPosition(canvas);
-            double centerX = (xMin + 4.0 * (position.X / canvas.ActualWidth)) / zoom;
-            double centerY = (yMin + 4.0 * (position.Y / canvas.ActualHeight)) / zoom;
-            double lastX = double.Parse(xPositionLabel.Content.ToString());
-            double lastY = double.Parse(yPositionLabel.Content.ToString());
-            xPositionLabel.Content = centerX.ToString();
-            yPositionLabel.Content = centerY.ToString();
+            double lastX = relativeMouseX;
+            double lastY = relativeMouseY;
+            relativeMouseX = (xMin + 4.0 * (position.X / canvas.ActualWidth)) / zoom;
+            relativeMouseY = (yMin + 4.0 * (position.Y / canvas.ActualHeight)) / zoom;
+            xPositionLabel.Content = (relativeMouseX + xOffset).ToString();
+            yPositionLabel.Content = (relativeMouseY + yOffset).ToString();
 
             if (e.LeftButton == MouseButtonState.Pressed)
             {
-                double deltaX = lastX - centerX;
-                double deltaY = lastY - centerY;
+                double deltaX = lastX - relativeMouseX;
+                double deltaY = lastY - relativeMouseY;
                 xOffset += deltaX;
                 yOffset += deltaY;
                 await PaintMandelbrot();
@@ -192,23 +193,19 @@ namespace WpfApp1
         {
             if (semaphore.CurrentCount > 0)
             {
-                if(Math.Sign(e.Delta) > 0)
+                if (Math.Sign(e.Delta) > 0)
                     zoom *= (long)slider.Value;
                 else
                     zoom /= (long)slider.Value;
 
-                double xOld = double.Parse(xPositionLabel.Content.ToString());
-                double yOld = double.Parse(yPositionLabel.Content.ToString());
-
-                xOffset += xOld;
-                yOffset += yOld;
+                xOffset += relativeMouseX;
+                yOffset += relativeMouseY;
 
                 await PaintMandelbrot();
             }
         }
 
         private async void Canvas_SizeChanged(object sender, SizeChangedEventArgs e) => await PaintMandelbrot();
-        private async void Canvas_Loaded(object sender, RoutedEventArgs e) => await PaintMandelbrot();
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e) => Mouse.OverrideCursor = Cursors.ScrollAll;
     }
 }
