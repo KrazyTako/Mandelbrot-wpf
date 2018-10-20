@@ -21,8 +21,6 @@ namespace WpfApp1
     {
         // Semaphore to prevent firing off the drawing of the mandelbrot while it is being drawn
         SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
-        Stack<Image> imageStack = new Stack<Image>();
-        Stack<Tuple<double, double, int>> offsetStack = new Stack<Tuple<double, double, int>>();
         CancellationTokenSource tokenSource = new CancellationTokenSource();
         PixelShader shader = new PixelShader();
         WriteableBitmap bitmap;
@@ -62,8 +60,6 @@ namespace WpfApp1
             zoom = 1;
             xOffset = 0;
             yOffset = 0;
-            imageStack.Clear();
-            offsetStack.Clear();
             await semaphore.WaitAsync();
             await PaintMandelbrot();
         }
@@ -139,7 +135,6 @@ namespace WpfApp1
             bitmap.WritePixels(new Int32Rect(0, 0, pixelWidth, pixelHeight), pixels, stride, 0);
             Image waveform = new Image();
             waveform.Source = bitmap;
-            //imageStack.Push(waveform);
             Canvas.Children.Clear();
             Canvas.Children.Add(waveform);
             timerLabel.Content = $"{Math.Round(timer.Elapsed.TotalSeconds, 3)} s";
@@ -208,23 +203,6 @@ namespace WpfApp1
             }
         }
 
-        private void UndoButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (imageStack.Count == 1 || offsetStack.Count == 0)
-            {
-                return;
-            }
-            imageStack.Pop();
-            Image last = imageStack.Pop();
-            Canvas.Children.Clear();
-            Canvas.Children.Add(last);
-            var offset = offsetStack.Pop();
-            xOffset -= offset.Item1;
-            yOffset -= offset.Item2;
-            zoom /= offset.Item3;
-            imageStack.Push(last);
-        }
-
         private async void Canvas_Loaded(object sender, RoutedEventArgs e) { await semaphore.WaitAsync(); await PaintMandelbrot(); }
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e) => Mouse.OverrideCursor = Cursors.ScrollAll;
         private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -246,7 +224,6 @@ namespace WpfApp1
 
                 double xOld = double.Parse(xPositionLabel.Content.ToString());
                 double yOld = double.Parse(yPositionLabel.Content.ToString());
-                offsetStack.Push(Tuple.Create(xOld, yOld, (int)slider.Value));
                 xOffset += xOld;
                 yOffset += yOld;
                 Point mouseP = e.GetPosition(canvas);
