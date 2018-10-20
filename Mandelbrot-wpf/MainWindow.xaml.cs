@@ -52,7 +52,6 @@ namespace WpfApp1
             zoomLabel = (Label)FindName("ZoomLabel");
             progressBar = (ProgressBar)FindName("ProgressBar");
             zoomHeader = (GroupBox)FindName("ZoomHeader");
-            Console.WriteLine("HORAY!");
         }
 
         private async void Button_Click(object sender, RoutedEventArgs e)
@@ -60,12 +59,19 @@ namespace WpfApp1
             zoom = 1;
             xOffset = 0;
             yOffset = 0;
-            await semaphore.WaitAsync();
             await PaintMandelbrot();
         }
 
         private async Task PaintMandelbrot()
         {
+            if (tokenSource.IsCancellationRequested)
+                return;
+
+            if (semaphore.CurrentCount == 0)
+                tokenSource.Cancel();
+
+            await semaphore.WaitAsync();
+
             var token = tokenSource.Token;
             Stopwatch timer = new Stopwatch();
             timer.Start();
@@ -124,11 +130,10 @@ namespace WpfApp1
                         progress.Report(1.0);
                     });
                 }, token);
-             }
+            }
             catch (OperationCanceledException e)
             {
-                semaphore.Release();
-                return;
+                tokenSource = new CancellationTokenSource();
             }
 
             timer.Stop();
@@ -157,39 +162,12 @@ namespace WpfApp1
                 double deltaY = lastY - centerY;
                 xOffset += deltaX;
                 yOffset += deltaY;
-                if (tokenSource.IsCancellationRequested)
-                {
-                    return;
-                }
-                if (semaphore.CurrentCount == 0)
-                {
-                    tokenSource.Cancel();
-                }
-                await semaphore.WaitAsync();
                 await PaintMandelbrot();
-                tokenSource = new CancellationTokenSource();
-                //xPositionLabel.Content = deltaX.ToString();
-                //yPositionLabel.Content = deltaY.ToString();
             }
             else
             {
                 Mouse.OverrideCursor = Cursors.Arrow;
             }
-        }
-
-        private async void Canvas_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            if (tokenSource.IsCancellationRequested)
-            {
-                return;
-            }
-            if (semaphore.CurrentCount == 0)
-            {
-                tokenSource.Cancel();
-            }
-            await semaphore.WaitAsync();
-            await PaintMandelbrot();
-            tokenSource = new CancellationTokenSource();
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -203,8 +181,6 @@ namespace WpfApp1
             }
         }
 
-        private async void Canvas_Loaded(object sender, RoutedEventArgs e) { await semaphore.WaitAsync(); await PaintMandelbrot(); }
-        private void Canvas_MouseDown(object sender, MouseButtonEventArgs e) => Mouse.OverrideCursor = Cursors.ScrollAll;
         private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             var thingy = (Slider)sender;
@@ -214,23 +190,25 @@ namespace WpfApp1
 
         private async void Canvas_MouseWheel(object sender, MouseWheelEventArgs e)
         {
-            var delta = e.Delta;
             if (semaphore.CurrentCount > 0)
             {
-                if(Math.Sign(delta) > 0)
+                if(Math.Sign(e.Delta) > 0)
                     zoom *= (long)slider.Value;
                 else
                     zoom /= (long)slider.Value;
 
                 double xOld = double.Parse(xPositionLabel.Content.ToString());
                 double yOld = double.Parse(yPositionLabel.Content.ToString());
+
                 xOffset += xOld;
                 yOffset += yOld;
-                Point mouseP = e.GetPosition(canvas);
-                var rect = new Rectangle() { Width = 100, Height = 100 };
-                await semaphore.WaitAsync();
+
                 await PaintMandelbrot();
             }
         }
+
+        private async void Canvas_SizeChanged(object sender, SizeChangedEventArgs e) => await PaintMandelbrot();
+        private async void Canvas_Loaded(object sender, RoutedEventArgs e) => await PaintMandelbrot();
+        private void Canvas_MouseDown(object sender, MouseButtonEventArgs e) => Mouse.OverrideCursor = Cursors.ScrollAll;
     }
 }
