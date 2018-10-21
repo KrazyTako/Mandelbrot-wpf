@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -8,9 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace WpfApp1
 {
@@ -32,17 +29,92 @@ namespace WpfApp1
         double relativeMouseX = 0.0;
         double relativeMouseY = 0.0;
 
-        public MainWindow()
-        {
-            InitializeComponent();
-        }
+        public MainWindow() => InitializeComponent();
+        private async void Canvas_SizeChanged(object sender, SizeChangedEventArgs e) => await PaintMandelbrot();
+        private void Canvas_MouseDown(object sender, MouseButtonEventArgs e) => Mouse.OverrideCursor = Cursors.ScrollAll;
 
-        private async void Button_Click(object sender, RoutedEventArgs e)
+        private async void ResetButton_Click(object sender, RoutedEventArgs e)
         {
             zoom = 1;
             xOffset = 0;
             yOffset = 0;
             await PaintMandelbrot();
+        }
+
+        private async void Canvas_MouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (semaphore.CurrentCount > 0)
+            {
+                if (Math.Sign(e.Delta) > 0)
+                    zoom *= Slider.Value;
+                else
+                    zoom /= Slider.Value;
+
+                xOffset += relativeMouseX;
+                yOffset += relativeMouseY;
+
+                await PaintMandelbrot();
+            }
+        }
+
+        private async void Canvas_MouseMove(object sender, MouseEventArgs e)
+        {
+            Point position = e.GetPosition(Canvas);
+            double lastX = relativeMouseX;
+            double lastY = relativeMouseY;
+            relativeMouseX = (xMin + 4.0 * (position.X / Canvas.ActualWidth)) / zoom;
+            relativeMouseY = (yMin + 4.0 * (position.Y / Canvas.ActualHeight)) / zoom;
+            XPosLabel.Content = (relativeMouseX + xOffset).ToString();
+            YPosLabel.Content = (relativeMouseY + yOffset).ToString();
+
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                double deltaX = lastX - relativeMouseX;
+                double deltaY = lastY - relativeMouseY;
+                xOffset += deltaX;
+                yOffset += deltaY;
+                await PaintMandelbrot();
+            }
+            else
+            {
+                Mouse.OverrideCursor = Cursors.Arrow;
+            }
+        }
+
+        private void SaveButton_Click(object sender, RoutedEventArgs e)
+        {
+            string fileName = FileNameTextBox.Text;
+
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                MessageBox.Show("Please enter a file name for the image", "Missing name", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            foreach (char item in Path.GetInvalidFileNameChars())
+            {
+                if (fileName.Contains(item.ToString()))
+                {
+                    MessageBox.Show("Invalid file name.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+            }
+
+            BitmapEncoder encoder = new PngBitmapEncoder();
+            BitmapSource bitmapSrc = MandelbrotImage.Source as BitmapSource;
+            encoder.Frames.Add(BitmapFrame.Create(bitmapSrc));
+
+            using (var filestream = new FileStream($"{fileName}.png", FileMode.Create))
+            {
+                encoder.Save(filestream);
+            }
+        }
+
+        private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            var thingy = (Slider)sender;
+            if (thingy.IsLoaded)
+                ZoomHeader.Header = $"Zoom: {e.NewValue}";
         }
 
         private async Task PaintMandelbrot()
@@ -130,67 +202,5 @@ namespace WpfApp1
             bitmap.WritePixels(new Int32Rect(0, 0, pixelWidth, pixelHeight), pixels, stride, 0);
             return bitmap;
         }
-
-        private async void Canvas_MouseMove(object sender, MouseEventArgs e)
-        {
-            Point position = e.GetPosition(Canvas);
-            double lastX = relativeMouseX;
-            double lastY = relativeMouseY;
-            relativeMouseX = (xMin + 4.0 * (position.X / Canvas.ActualWidth)) / zoom;
-            relativeMouseY = (yMin + 4.0 * (position.Y / Canvas.ActualHeight)) / zoom;
-            XPosLabel.Content = (relativeMouseX + xOffset).ToString();
-            YPosLabel.Content = (relativeMouseY + yOffset).ToString();
-
-            if (e.LeftButton == MouseButtonState.Pressed)
-            {
-                double deltaX = lastX - relativeMouseX;
-                double deltaY = lastY - relativeMouseY;
-                xOffset += deltaX;
-                yOffset += deltaY;
-                await PaintMandelbrot();
-            }
-            else
-            {
-                Mouse.OverrideCursor = Cursors.Arrow;
-            }
-        }
-
-        private void SaveButton_Click(object sender, RoutedEventArgs e)
-        {
-            BitmapEncoder encoder = new PngBitmapEncoder();
-            BitmapSource bitmapSrc = MandelbrotImage.Source as BitmapSource;
-            encoder.Frames.Add(BitmapFrame.Create(bitmapSrc));
-
-            using (var filestream = new FileStream("thing.png", FileMode.Create))
-            {
-                encoder.Save(filestream);
-            }
-        }
-
-        private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            var thingy = (Slider)sender;
-            if (thingy.IsLoaded)
-                ZoomHeader.Header = $"Zoom: {e.NewValue}";
-        }
-
-        private async void Canvas_MouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            if (semaphore.CurrentCount > 0)
-            {
-                if (Math.Sign(e.Delta) > 0)
-                    zoom *= Slider.Value;
-                else
-                    zoom /= Slider.Value;
-
-                xOffset += relativeMouseX;
-                yOffset += relativeMouseY;
-
-                await PaintMandelbrot();
-            }
-        }
-
-        private async void Canvas_SizeChanged(object sender, SizeChangedEventArgs e) => await PaintMandelbrot();
-        private void Canvas_MouseDown(object sender, MouseButtonEventArgs e) => Mouse.OverrideCursor = Cursors.ScrollAll;
     }
 }

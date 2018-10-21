@@ -18,7 +18,7 @@
             <Image x:Name="MandelbrotImage"/>
         </Canvas>
         <StackPanel Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-            <Button x:Name="ResetButton" Content="Reset" HorizontalAlignment="Stretch" VerticalAlignment="Top" Height="100" Click="Button_Click"/>
+            <Button x:Name="ResetButton" Content="Reset" HorizontalAlignment="Stretch" VerticalAlignment="Top" Height="100" Click="ResetButton_Click"/>
             <GroupBox Header="Location" Height="139">
                 <StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                     <Label Content="Position X:"/>
@@ -39,7 +39,7 @@
             <GroupBox Header="Export" Height="105">
                 <StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                     <Label Content="File name"/>
-                    <TextBox TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" Width="100" MaxLines="1" TextAlignment="Center" Margin="0,0,0,10"/>
+                    <TextBox x:Name="FileNameTextBox" TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" Width="100" MaxLines="1" TextAlignment="Center" Margin="0,0,0,10" Cursor="IBeam"/>
                     <Button x:Name="SaveButton" Content="Save" Width="75" Margin="0,0,0,10" Click="SaveButton_Click"/>
                 </StackPanel>
             </GroupBox>
