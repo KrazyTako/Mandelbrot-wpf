@@ -22,16 +22,6 @@ namespace WpfApp1
         // Semaphore to prevent firing off the drawing of the mandelbrot while it is being drawn
         SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
         CancellationTokenSource tokenSource = new CancellationTokenSource();
-        WriteableBitmap bitmap;
-
-        Canvas canvas;
-        GroupBox zoomHeader;
-        Label timerLabel;
-        Label xPositionLabel;
-        Label yPositionLabel;
-        Label zoomLabel;
-        Slider slider;
-        ProgressBar progressBar;
 
         const int MAX = 512;
         const double xMin = -2;
@@ -45,14 +35,6 @@ namespace WpfApp1
         public MainWindow()
         {
             InitializeComponent();
-            canvas = (Canvas)FindName("Canvas");
-            timerLabel = (Label)FindName("TimerLabel");
-            xPositionLabel = (Label)FindName("XPosLabel");
-            yPositionLabel = (Label)FindName("YPosLabel");
-            slider = (Slider)FindName("Slider");
-            zoomLabel = (Label)FindName("ZoomLabel");
-            progressBar = (ProgressBar)FindName("ProgressBar");
-            zoomHeader = (GroupBox)FindName("ZoomHeader");
         }
 
         private async void Button_Click(object sender, RoutedEventArgs e)
@@ -73,18 +55,27 @@ namespace WpfApp1
 
             await semaphore.WaitAsync();
 
-            var token = tokenSource.Token;
             Stopwatch timer = new Stopwatch();
             timer.Start();
 
-            int pixelWidth = (int)canvas.ActualWidth;
-            int pixelHeight = (int)canvas.ActualHeight;
+            Image image = new Image();
+            MandelbrotImage.Source = await GenerateBitmap();
+            timer.Stop();
 
-            IProgress<double> progress = new Progress<double>(value => progressBar.Value += value);
-            progressBar.Value = 0;
-            progressBar.Maximum = pixelHeight;
+            TimerLabel.Content = $"{Math.Round(timer.Elapsed.TotalSeconds, 3)} s";
+            semaphore.Release();
+        }
 
-            bitmap = new WriteableBitmap(pixelWidth, pixelHeight, 96, 96, PixelFormats.Bgr32, null);
+        private async Task<BitmapSource> GenerateBitmap()
+        {
+            int pixelWidth = (int)Canvas.ActualWidth;
+            int pixelHeight = (int)Canvas.ActualHeight;
+
+            IProgress<double> progress = new Progress<double>(value => ProgressBar.Value += value);
+            ProgressBar.Value = 0;
+            ProgressBar.Maximum = pixelHeight;
+
+            WriteableBitmap bitmap = new WriteableBitmap(pixelWidth, pixelHeight, 96, 96, PixelFormats.Bgr32, null);
 
             int bytesPerPixel = bitmap.Format.BitsPerPixel / 8;
             int widthInBytes = pixelWidth * bytesPerPixel;
@@ -102,12 +93,11 @@ namespace WpfApp1
                 await Task.Run(() =>
                 {
                     var options = new ParallelOptions();
-                    options.CancellationToken = token;
+                    options.CancellationToken = tokenSource.Token;
                     Parallel.For(0, pixelHeight, options, row =>
                     {
                         int currentLine = row * stride;
                         long colxx = 0;
-                        int iter = widthInBytes / 4;
                         for (int col = 0; col < widthInBytes; col += bytesPerPixel)
                         {
                             double c_re = ((colxx - widthDiv2) * 4.0 / widthXzoom) + xOffset;
@@ -130,32 +120,26 @@ namespace WpfApp1
                         }
                         progress.Report(1.0);
                     });
-                }, token);
+                });
             }
             catch (OperationCanceledException e)
             {
                 tokenSource = new CancellationTokenSource();
             }
 
-            timer.Stop();
             bitmap.WritePixels(new Int32Rect(0, 0, pixelWidth, pixelHeight), pixels, stride, 0);
-            Image waveform = new Image();
-            waveform.Source = bitmap;
-            Canvas.Children.Clear();
-            Canvas.Children.Add(waveform);
-            timerLabel.Content = $"{Math.Round(timer.Elapsed.TotalSeconds, 3)} s";
-            semaphore.Release();
+            return bitmap;
         }
 
         private async void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
-            Point position = e.GetPosition(canvas);
+            Point position = e.GetPosition(Canvas);
             double lastX = relativeMouseX;
             double lastY = relativeMouseY;
-            relativeMouseX = (xMin + 4.0 * (position.X / canvas.ActualWidth)) / zoom;
-            relativeMouseY = (yMin + 4.0 * (position.Y / canvas.ActualHeight)) / zoom;
-            xPositionLabel.Content = (relativeMouseX + xOffset).ToString();
-            yPositionLabel.Content = (relativeMouseY + yOffset).ToString();
+            relativeMouseX = (xMin + 4.0 * (position.X / Canvas.ActualWidth)) / zoom;
+            relativeMouseY = (yMin + 4.0 * (position.Y / Canvas.ActualHeight)) / zoom;
+            XPosLabel.Content = (relativeMouseX + xOffset).ToString();
+            YPosLabel.Content = (relativeMouseY + yOffset).ToString();
 
             if (e.LeftButton == MouseButtonState.Pressed)
             {
@@ -174,7 +158,8 @@ namespace WpfApp1
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
             BitmapEncoder encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            BitmapSource bitmapSrc = MandelbrotImage.Source as BitmapSource;
+            encoder.Frames.Add(BitmapFrame.Create(bitmapSrc));
 
             using (var filestream = new FileStream("thing.png", FileMode.Create))
             {
@@ -186,7 +171,7 @@ namespace WpfApp1
         {
             var thingy = (Slider)sender;
             if (thingy.IsLoaded)
-                zoomHeader.Header = $"Zoom: {e.NewValue}";
+                ZoomHeader.Header = $"Zoom: {e.NewValue}";
         }
 
         private async void Canvas_MouseWheel(object sender, MouseWheelEventArgs e)
@@ -194,9 +179,9 @@ namespace WpfApp1
             if (semaphore.CurrentCount > 0)
             {
                 if (Math.Sign(e.Delta) > 0)
-                    zoom *= (long)slider.Value;
+                    zoom *= Slider.Value;
                 else
-                    zoom /= (long)slider.Value;
+                    zoom /= Slider.Value;
 
                 xOffset += relativeMouseX;
                 yOffset += relativeMouseY;
