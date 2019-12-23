@@ -30,6 +30,11 @@
             <GroupBox x:Name="ZoomHeader" Header="Zoom: 2" Height="85">
                 <Slider x:Name="Slider" HorizontalAlignment="Stretch" VerticalAlignment="Center" SmallChange="1" Maximum="5" Minimum="2" TickPlacement="BottomRight" IsSnapToTickEnabled="True" SelectionEnd="5" ValueChanged="Slider_ValueChanged" Value="1"/>
             </GroupBox>
+            <GroupBox Header="Max Iterations">
+                <StackPanel>
+                    <TextBox x:Name="MaxIterationsTextBox" TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" Width="100" MaxLines="1" TextAlignment="Center" Cursor="IBeam" Text="256" Margin="0,10" PreviewTextInput="MaxIterationsTextBox_PreviewTextInput" KeyUp="MaxIterationsTextBox_KeyUp"/>
+                </StackPanel>
+            </GroupBox>
             <GroupBox Header="Render Time" Height="116">
                 <StackPanel>
                     <Label x:Name="TimerLabel" Content="0.000 s" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="36"/>

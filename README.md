@@ -2,6 +2,7 @@
 
 Hover over the area you want to zoom in on the Mandlebrot set, then scroll to zoom in or out.
 Drag click with the mouse to pan around. Find something interesting and save the image!
+Adjust the `Max Iterations` number to see the difference in detail when generating the Mandlebrot. A good range is between 128 - 4096.
 Looks best when ran in full screen. Build and run it in release mode for best performance.
 
 This was based off a homework assignment in the Fall of 2016 where we had to render the Mandlebrot set using Win Forms.

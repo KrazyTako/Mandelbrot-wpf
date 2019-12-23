@@ -20,9 +20,9 @@ namespace WpfApp1
         SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
         CancellationTokenSource tokenSource = new CancellationTokenSource();
 
-        const int MAX = 512;
         const double xMin = -2;
         const double yMin = -2;
+        int maxIterations = 256;
         double zoom = 1;
         double xOffset = 0;
         double yOffset = 0;
@@ -124,6 +124,17 @@ namespace WpfApp1
 
         private async Task PaintMandelbrot()
         {
+            if (!int.TryParse(MaxIterationsTextBox.Text, out maxIterations))
+            {
+                MessageBox.Show("Invalid max iterations entered. Please provide a number", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            if(maxIterations > 10000)
+            {
+                MessageBox.Show("Invalid max iterations entered. Please provide a number between 0 - 10000", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
             if (tokenSource.IsCancellationRequested)
                 return;
 
@@ -179,7 +190,7 @@ namespace WpfApp1
                             double c_im = ((row - heightDiv2) * 4.0 / heightXzoom) + yOffset;
                             double x = 0, y = 0;
                             int iteration = 0;
-                            while (x * x + y * y <= 4 && iteration < MAX)
+                            while (x * x + y * y <= 4 && iteration < maxIterations)
                             {
                                 double x_new = x * x - y * y + c_re;
                                 y = 2 * x * y + c_im;
@@ -205,5 +216,13 @@ namespace WpfApp1
             bitmap.WritePixels(new Int32Rect(0, 0, pixelWidth, pixelHeight), pixels, stride, 0);
             return bitmap;
         }
+
+        private void MaxIterationsTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            if (!char.IsDigit(e.Text, e.Text.Length - 1))
+                e.Handled = true;
+        }
+
+        private async void MaxIterationsTextBox_KeyUp(object sender, KeyEventArgs e) => await PaintMandelbrot();
     }
 }
