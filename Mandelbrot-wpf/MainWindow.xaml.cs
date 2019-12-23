@@ -110,6 +110,8 @@ namespace WpfApp1
             using (var filestream = new FileStream($"{fileName}.png", FileMode.Create))
             {
                 encoder.Save(filestream);
+                MessageBox.Show($"Saved image {fileName}.png to bin.", "Success!");
+                FileNameTextBox.Clear();
             }
         }
 
@@ -133,7 +135,6 @@ namespace WpfApp1
             Stopwatch timer = new Stopwatch();
             timer.Start();
 
-            Image image = new Image();
             MandelbrotImage.Source = await GenerateBitmap();
             timer.Stop();
 
@@ -165,8 +166,7 @@ namespace WpfApp1
 
             await Task.Run(() =>
             {
-                var options = new ParallelOptions();
-                options.CancellationToken = tokenSource.Token;
+                var options = new ParallelOptions() { CancellationToken = tokenSource.Token };
                 try
                 {
                     Parallel.For(0, pixelHeight, options, row =>
@@ -196,7 +196,7 @@ namespace WpfApp1
                         progress.Report(1.0);
                     });
                 }
-                catch (OperationCanceledException ex)
+                catch (OperationCanceledException)
                 {
                     tokenSource = new CancellationTokenSource();
                 }
