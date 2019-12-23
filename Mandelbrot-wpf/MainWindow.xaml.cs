@@ -28,10 +28,11 @@ namespace WpfApp1
         double yOffset = 0;
         double relativeMouseX = 0.0;
         double relativeMouseY = 0.0;
+        double lastMouseRenderX = 0;
+        double lastMouseRenderY = 0;
 
         public MainWindow() => InitializeComponent();
         private async void Canvas_SizeChanged(object sender, SizeChangedEventArgs e) => await PaintMandelbrot();
-        private void Canvas_MouseDown(object sender, MouseButtonEventArgs e) => Mouse.OverrideCursor = Cursors.ScrollAll;
 
         private async void ResetButton_Click(object sender, RoutedEventArgs e)
         {
@@ -57,28 +58,30 @@ namespace WpfApp1
             }
         }
 
-        private async void Canvas_MouseMove(object sender, MouseEventArgs e)
+        private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            lastMouseRenderX = relativeMouseX;
+            lastMouseRenderY = relativeMouseY;
+            Mouse.OverrideCursor = Cursors.ScrollAll;
+        }
+
+        private async void Canvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            Mouse.OverrideCursor = Cursors.Arrow;
+            double deltaX = lastMouseRenderX - relativeMouseX;
+            double deltaY = lastMouseRenderY - relativeMouseY;
+            xOffset += deltaX;
+            yOffset += deltaY;
+            await PaintMandelbrot();
+        }
+
+        private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
             Point position = e.GetPosition(Canvas);
-            double lastX = relativeMouseX;
-            double lastY = relativeMouseY;
             relativeMouseX = (xMin + 4.0 * (position.X / Canvas.ActualWidth)) / zoom;
             relativeMouseY = (yMin + 4.0 * (position.Y / Canvas.ActualHeight)) / zoom;
             XPosLabel.Content = (relativeMouseX + xOffset).ToString();
             YPosLabel.Content = (relativeMouseY + yOffset).ToString();
-
-            if (e.LeftButton == MouseButtonState.Pressed)
-            {
-                double deltaX = lastX - relativeMouseX;
-                double deltaY = lastY - relativeMouseY;
-                xOffset += deltaX;
-                yOffset += deltaY;
-                await PaintMandelbrot();
-            }
-            else
-            {
-                Mouse.OverrideCursor = Cursors.Arrow;
-            }
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -160,12 +163,12 @@ namespace WpfApp1
             double heightDiv2 = bitmap.Height / 2.0;
             double heightXzoom = bitmap.Height * zoom;
 
-            try
+            await Task.Run(() =>
             {
-                await Task.Run(() =>
+                var options = new ParallelOptions();
+                options.CancellationToken = tokenSource.Token;
+                try
                 {
-                    var options = new ParallelOptions();
-                    options.CancellationToken = tokenSource.Token;
                     Parallel.For(0, pixelHeight, options, row =>
                     {
                         int currentLine = row * stride;
@@ -192,12 +195,12 @@ namespace WpfApp1
                         }
                         progress.Report(1.0);
                     });
-                });
-            }
-            catch (OperationCanceledException e)
-            {
-                tokenSource = new CancellationTokenSource();
-            }
+                }
+                catch (OperationCanceledException ex)
+                {
+                    tokenSource = new CancellationTokenSource();
+                }
+            });
 
             bitmap.WritePixels(new Int32Rect(0, 0, pixelWidth, pixelHeight), pixels, stride, 0);
             return bitmap;
