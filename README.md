@@ -9,3 +9,5 @@ This was based off a homework assignment in the Fall of 2016 where we had to ren
 
 I have since rewritten the project in WPF and updated it to do faster image rendering using parallel bitmap manipulation.
 I also added UI controls such as the zoom adjustment level bar, render time, and image save.
+
+![image](https://github.com/KrazyTako/Mandelbrot-wpf/assets/29238081/b679e6d4-2afc-4e73-b918-40c97c663419)
